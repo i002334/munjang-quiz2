@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>한자 카드 문장 완성 퀴즈</title>
+    <style>
+        :root {
+            --bg-color: #f4f7f6;
+            --card-bg: #ffffff;
+            --primary-color: #2c3e50;
+            --accent-color: #2980b9;
+            --success-color: #27ae60;
+            --error-color: #c0392b;
+        }
+
+        body {
+            font-family: 'Malgun Gothic', sans-serif;
+            background-color: var(--bg-color);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .quiz-container {
+            background: var(--card-bg);
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            padding: 25px;
+            max-width: 650px;
+            width: 100%;
+            text-align: center;
+        }
+
+        .progress {
+            font-size: 0.95rem;
+            color: #7f8c8d;
+            margin-bottom: 15px;
+            font-weight: bold;
+        }
+
+        .question-box {
+            background-color: #eef2f5;
+            padding: 20px;
+            border-radius: 8px;
+            font-size: 1.3rem;
+            font-weight: bold;
+            color: var(--primary-color);
+            margin-bottom: 20px;
+            min-height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .answer-slots {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 30px;
+            min-height: 80px;
+            flex-wrap: wrap;
+        }
+
+        .card {
+            width: 60px;
+            height: 75px;
+            border: 2px solid #bdc3c7;
+            border-radius: 8px;
+            background-color: #fff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            user-select: none;
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+
+        .card:hover {
+            transform: translateY(-3px);
+            border-color: var(--accent-color);
+        }
+
+        .card .hanja {
+            font-size: 2rem;
+            font-weight: bold;
+            color: var(--primary-color);
+        }
+
+        .slot {
+            border: 2px dashed #95a5a6;
+            background-color: #fafafa;
+        }
+
+        .card-pool {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: center;
+            padding-top: 15px;
+            border-top: 2px solid #ecf0f1;
+        }
+
+        .btn-group {
+            margin-top: 20px;
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+
+        button {
+            padding: 10px 20px;
+            font-size: 1rem;
+            font-weight: bold;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .btn-prev { background-color: #7f8c8d; color: white; }
+        .btn-prev:hover { background-color: #626d6e; }
+
+        .btn-reset { background-color: #e67e22; color: white; }
+        .btn-reset:hover { background-color: #d35400; }
+
+        .btn-next { background-color: var(--accent-color); color: white; }
+        .btn-next:hover { background-color: #1a5276; }
+
+        .btn-submit { background-color: var(--success-color); color: white; }
+        .btn-submit:hover { background-color: #1e8449; }
+
+        .message {
+            margin-top: 15px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            min-height: 25px;
+            color: var(--error-color);
+        }
+
+        /* 최종 결과 스타일 */
+        .result-box {
+            display: none;
+            text-align: left;
+        }
+
+        .result-score {
+            font-size: 1.8rem;
+            font-weight: bold;
+            text-align: center;
+            color: var(--primary-color);
+            margin-bottom: 20px;
+        }
+
+        .result-item {
+            background-color: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            padding: 12px 15px;
+            margin-bottom: 10px;
+        }
+
+        .result-item.correct { border-left: 5px solid var(--success-color); }
+        .result-item.incorrect { border-left: 5px solid var(--error-color); }
+
+        .result-q {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .result-ans {
+            font-size: 0.9rem;
+            color: #555;
+        }
+    </style>
+</head>
+<body>
+
+<div class="quiz-container">
+    <div id="quizSection">
+        <div class="progress" id="progress">문제 1 / 13</div>
+        <div class="question-box" id="question">문제가 여기에 표시됩니다.</div>
+
+        <!-- 정답 조합 슬롯 -->
+        <div class="answer-slots" id="answerSlots"></div>
+
+        <!-- 한자 카드 선택 영역 (한글 음 삭제됨) -->
+        <div class="card-pool" id="cardPool"></div>
+
+        <div class="message" id="message"></div>
+
+        <div class="btn-group">
+            <button class="btn-prev" id="prevBtn" onclick="prevQuestion()">이전 문제</button>
+            <button class="btn-reset" onclick="resetAnswer()">초기화</button>
+            <button class="btn-next" id="nextBtn" onclick="nextQuestion()">다음 문제</button>
+            <button class="btn-submit" id="submitBtn" onclick="submitQuiz()" style="display: none;">최종 채점하기</button>
+        </div>
+    </div>
+
+    <!-- 모든 문제 풀이 후 결과 화면 -->
+    <div class="result-box" id="resultSection">
+        <div class="result-score" id="resultScore">0점</div>
+        <div id="resultList"></div>
+        <div class="btn-group">
+            <button class="btn-next" onclick="restartQuiz()">다시 풀기</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // 한자 카드 데이터 (한글 음 제외)
+    const ALL_CARDS = ['高', '多', '讀', '冷', '氷', '山', '書', '水', '兒', '於', '爲', '天', '靑', '秋'];
+
+    const QUIZ_DATA = [
+        { q: "산이 높다.", answer: ["山", "高"] },
+        { q: "산이 높고 푸르다.", answer: ["山", "高", "靑"] },
+        { q: "푸른 산이 높다.", answer: ["靑", "山", "高"] },
+        { q: "하늘이 파랗다.", answer: ["天", "靑"] },
+        { q: "가을 하늘이 파랗다.", answer: ["秋", "天", "靑"] },
+        { q: "가을 하늘이 높다.", answer: ["秋", "天", "高"] },
+        { q: "책을 읽다.", answer: ["讀", "書"] },
+        { q: "아이가 책을 읽는다.", answer: ["兒", "讀", "書"] },
+        { q: "아이가 책을 많이 읽는다.", answer: ["兒", "多", "讀", "書"] },
+        { q: "차가운 물은 얼음이 되었다.", answer: ["冷", "水", "爲", "氷"] },
+        { q: "차가운 얼음은 푸른 물이 되었다.", answer: ["冷", "氷", "爲", "靑", "水"] },
+        { q: "얼음은 물보다 차갑다.", answer: ["氷", "冷", "於", "水"] },
+        { q: "아이가 산에서 책을 읽는다.", answer: ["兒", "讀", "書", "於", "山"] }
+    ];
+
+    let currentIdx = 0;
+    let userAnswers = Array(QUIZ_DATA.length).fill(null).map(() => []);
+
+    function loadQuestion() {
+        const currentQuiz = QUIZ_DATA[currentIdx];
+        document.getElementById('progress').innerText = `문제 ${currentIdx + 1} / ${QUIZ_DATA.length}`;
+        document.getElementById('question').innerText = currentQuiz.q;
+        document.getElementById('message').innerText = '';
+
+        document.getElementById('prevBtn').style.display = currentIdx === 0 ? 'none' : 'inline-block';
+        if (currentIdx === QUIZ_DATA.length - 1) {
+            document.getElementById('nextBtn').style.display = 'none';
+            document.getElementById('submitBtn').style.display = 'inline-block';
+        } else {
+            document.getElementById('nextBtn').style.display = 'inline-block';
+            document.getElementById('submitBtn').style.display = 'none';
+        }
+
+        renderSlots();
+        renderPool();
+    }
+
+    function renderSlots() {
+        const slotsContainer = document.getElementById('answerSlots');
+        slotsContainer.innerHTML = '';
+        const targetLen = QUIZ_DATA[currentIdx].answer.length;
+        const currentSelected = userAnswers[currentIdx];
+
+        for (let i = 0; i < targetLen; i++) {
+            if (i < currentSelected.length) {
+                const hanja = currentSelected[i];
+                const cardEl = createCardElement(hanja, () => removeCard(i));
+                slotsContainer.appendChild(cardEl);
+            } else {
+                const slotEl = document.createElement('div');
+                slotEl.className = 'card slot';
+                slotsContainer.appendChild(slotEl);
+            }
+        }
+    }
+
+    function renderPool() {
+        const poolContainer = document.getElementById('cardPool');
+        poolContainer.innerHTML = '';
+
+        ALL_CARDS.forEach(hanja => {
+            const cardEl = createCardElement(hanja, () => selectCard(hanja));
+            poolContainer.appendChild(cardEl);
+        });
+    }
+
+    function createCardElement(hanjaChar, onClick) {
+        const card = document.createElement('div');
+        card.className = 'card';
+        card.onclick = onClick;
+
+        const hanja = document.createElement('div');
+        hanja.className = 'hanja';
+        hanja.innerText = hanjaChar;
+
+        card.appendChild(hanja);
+        return card;
+    }
+
+    function selectCard(hanjaChar) {
+        const maxLen = QUIZ_DATA[currentIdx].answer.length;
+        if (userAnswers[currentIdx].length < maxLen) {
+            userAnswers[currentIdx].push(hanjaChar);
+            renderSlots();
+        }
+    }
+
+    function removeCard(index) {
+        userAnswers[currentIdx].splice(index, 1);
+        renderSlots();
+    }
+
+    function resetAnswer() {
+        userAnswers[currentIdx] = [];
+        renderSlots();
+        document.getElementById('message').innerText = '';
+    }
+
+    function prevQuestion() {
+        if (currentIdx > 0) {
+            currentIdx--;
+            loadQuestion();
+        }
+    }
+
+    function nextQuestion() {
+        if (currentIdx < QUIZ_DATA.length - 1) {
+            currentIdx++;
+            loadQuestion();
+        }
+    }
+
+    function submitQuiz() {
+        const uncompleted = userAnswers.findIndex((ans, idx) => ans.length < QUIZ_DATA[idx].answer.length);
+        if (uncompleted !== -1) {
+            document.getElementById('message').innerText = `${uncompleted + 1}번 문제의 빈칸을 모두 채워주세요!`;
+            currentIdx = uncompleted;
+            loadQuestion();
+            return;
+        }
+
+        let correctCount = 0;
+        const resultListEl = document.getElementById('resultList');
+        resultListEl.innerHTML = '';
+
+        QUIZ_DATA.forEach((quiz, idx) => {
+            const userAnsStr = userAnswers[idx].join(' ');
+            const correctAnsStr = quiz.answer.join(' ');
+            const isCorrect = userAnsStr === correctAnsStr;
+
+            if (isCorrect) correctCount++;
+
+            const item = document.createElement('div');
+            item.className = `result-item ${isCorrect ? 'correct' : 'incorrect'}`;
+            item.innerHTML = `
+                <div class="result-q">${idx + 1}. ${quiz.q} [${isCorrect ? '⭕ 정답' : '❌ 오답'}]</div>
+                <div class="result-ans">작성한 답: ${userAnsStr || '(미입력)'} / 정답: ${correctAnsStr}</div>
+            `;
+            resultListEl.appendChild(item);
+        });
+
+        const score = Math.round((correctCount / QUIZ_DATA.length) * 100);
+        document.getElementById('resultScore').innerText = `최종 점수: ${score}점 (${correctCount} / ${QUIZ_DATA.length})`;
+
+        document.getElementById('quizSection').style.display = 'none';
+        document.getElementById('resultSection').style.display = 'block';
+    }
+
+    function restartQuiz() {
+        currentIdx = 0;
+        userAnswers = Array(QUIZ_DATA.length).fill(null).map(() => []);
+        document.getElementById('quizSection').style.display = 'block';
+        document.getElementById('resultSection').style.display = 'none';
+        loadQuestion();
+    }
+
+    loadQuestion();
+</script>
+
+</body>
+</html>
